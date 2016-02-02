@@ -4,7 +4,6 @@
 #
 
 . "$PSScriptRoot\..\common\_common.ps1"
-. "$RepoRoot\scripts\build\generate-version.ps1"
 
 header "Generating zip package"
 _ "$RepoRoot\scripts\package\package-zip.ps1"
