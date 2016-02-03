@@ -40,19 +40,38 @@ namespace Microsoft.DotNet.Cli.Compiler.Common
             }));
         }
 
-        internal static IEnumerable<string> RuntimeAssets(this LibraryExport export)
+        internal static IEnumerable<LibraryAsset> RuntimeAssets(this LibraryExport export)
         {
             return export.RuntimeAssemblies.Union(export.NativeLibraries)
-                .Select(e => e.ResolvedPath)
                 .Union(export.RuntimeAssets);
         }
 
-        internal static void CopyTo(this IEnumerable<string> assets, string destinationPath)
+        public static void CopyTo(this IEnumerable<LibraryAsset> assets, string destinationPath)
         {
+            if (!Directory.Exists(destinationPath))
+            {
+                Directory.CreateDirectory(destinationPath);
+            }
             foreach (var asset in assets)
             {
-                File.Copy(asset, Path.Combine(destinationPath, Path.GetFileName(asset)),
-                    overwrite: true);
+
+                string targetName = destinationPath;
+                if (!string.IsNullOrEmpty(asset.RelativePath))
+                {
+                    targetName = Path.Combine(destinationPath, asset.RelativePath);
+                    var destinationAssetPath = Path.GetDirectoryName(targetName);
+
+                    if (!Directory.Exists(destinationAssetPath))
+                    {
+                        Directory.CreateDirectory(destinationAssetPath);
+                    }
+                }
+                else
+                {
+                    targetName = Path.Combine(destinationPath, Path.GetFileName(asset.ResolvedPath));
+                }
+
+                File.Copy(asset.ResolvedPath, targetName, overwrite: true);
             }
         }
     }

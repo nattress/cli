@@ -120,6 +120,15 @@ namespace Microsoft.DotNet.ProjectModel
             return targetFrameworkInfo ?? _defaultTargetFrameworkConfiguration;
         }
 
+        public bool HasRuntimeOutput(string configuration)
+        {
+
+            var compilationOptions = GetCompilerOptions(targetFramework: null, configurationName: configuration);
+
+            // TODO: Make this opt in via another mechanism
+            return compilationOptions.EmitEntryPoint.GetValueOrDefault() ||
+                   !string.IsNullOrEmpty(TestRunner);
+        }
         private CommonCompilerOptions GetCompilerOptions()
         {
             return _defaultCompilerOptions;

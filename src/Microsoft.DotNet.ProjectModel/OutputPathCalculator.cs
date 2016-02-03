@@ -2,9 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Runtime.InteropServices;
+using Microsoft.DotNet.ProjectModel.Utilities;
 using NuGet.Frameworks;
 
 namespace Microsoft.DotNet.ProjectModel
@@ -12,142 +11,103 @@ namespace Microsoft.DotNet.ProjectModel
     public class OutputPathCalculator
     {
         private const string ObjDirectoryName = "obj";
+        private const string BinDirectoryName = "bin";
 
         private readonly Project _project;
         private readonly NuGetFramework _framework;
 
-        private readonly string _runtimeIdentifier;
-
-        /// <summary>
-        /// Unaltered output path. Either what is passed in in the constructor, or the project directory.
-        /// </summary>
-        private string BaseOutputPath { get; }
-
-        public string BaseCompilationOutputPath { get; }
+        private readonly string _runtimePath;
+        private readonly RuntimeOutputFiles _runtimeFiles;
 
         public OutputPathCalculator(
             Project project,
             NuGetFramework framework,
             string runtimeIdentifier,
-            string baseOutputPath)
+            string configuration,
+            string rootPath,
+            string buildBasePath,
+            string outputPath)
         {
             _project = project;
             _framework = framework;
-            _runtimeIdentifier = runtimeIdentifier;
 
-            BaseOutputPath = string.IsNullOrWhiteSpace(baseOutputPath) ? _project.ProjectDirectory : baseOutputPath;
-
-            BaseCompilationOutputPath = string.IsNullOrWhiteSpace(baseOutputPath)
-                ? Path.Combine(_project.ProjectDirectory, DirectoryNames.Bin)
-                : baseOutputPath;
-        }
-
-        public string GetOutputDirectoryPath(string buildConfiguration)
-        {
-            var outDir = Path.Combine(BaseCompilationOutputPath,
-                buildConfiguration,
-                _framework.GetShortFolderName());
-
-            if (!string.IsNullOrEmpty(_runtimeIdentifier))
+            string resolvedBuildBasePath;
+            if (string.IsNullOrEmpty(buildBasePath))
             {
-                outDir = Path.Combine(outDir, _runtimeIdentifier);
-            }
-
-            return outDir;
-        }
-
-        public string GetIntermediateOutputDirectoryPath(string buildConfiguration, string intermediateOutputValue)
-        {
-            string intermediateOutputPath;
-
-            if (string.IsNullOrEmpty(intermediateOutputValue))
-            {
-                intermediateOutputPath = Path.Combine(
-                    BaseOutputPath,
-                    ObjDirectoryName,
-                    buildConfiguration,
-                    _framework.GetTwoDigitShortFolderName());
+                resolvedBuildBasePath = _project.ProjectDirectory;
             }
             else
             {
-                intermediateOutputPath = intermediateOutputValue;
+                if (string.IsNullOrEmpty(rootPath))
+                {
+                    resolvedBuildBasePath = Path.Combine(buildBasePath, project.Name);
+                }
+                else
+                {
+                    resolvedBuildBasePath = _project.ProjectDirectory.Replace(rootPath, buildBasePath);
+                }
             }
 
-            return intermediateOutputPath;
-        }
+            CompilationOutputPath = PathUtility.EnsureTrailingSlash(Path.Combine(resolvedBuildBasePath,
+                BinDirectoryName,
+                configuration,
+                _framework.GetShortFolderName()));
 
-        public string GetAssemblyPath(string buildConfiguration)
-        {
-            var compilationOptions = _project.GetCompilerOptions(_framework, buildConfiguration);
-            var outputExtension = FileNameSuffixes.DotNet.DynamicLib;
-
-            if (_framework.IsDesktop() && compilationOptions.EmitEntryPoint.GetValueOrDefault())
+            if (string.IsNullOrEmpty(outputPath))
             {
-                outputExtension = FileNameSuffixes.DotNet.Exe;
+                if (!string.IsNullOrEmpty(runtimeIdentifier))
+                {
+                    _runtimePath = PathUtility.EnsureTrailingSlash(Path.Combine(CompilationOutputPath, runtimeIdentifier));
+                }
+            }
+            else
+            {
+                _runtimePath = PathUtility.EnsureTrailingSlash(Path.GetFullPath(outputPath));
             }
 
-            return Path.Combine(
-                GetOutputDirectoryPath(buildConfiguration),
-                _project.Name + outputExtension);
-        }
+            IntermediateOutputDirectoryPath = PathUtility.EnsureTrailingSlash(Path.Combine(
+                resolvedBuildBasePath,
+                ObjDirectoryName,
+                configuration,
+                _framework.GetTwoDigitShortFolderName()));
 
-        public IEnumerable<string> GetBuildOutputs(string buildConfiguration)
-        {
-            var assemblyPath = GetAssemblyPath(buildConfiguration);
-
-            yield return assemblyPath;
-            yield return Path.ChangeExtension(assemblyPath, "pdb");
-
-            var compilationOptions = _project.GetCompilerOptions(_framework, buildConfiguration);
-
-            if (compilationOptions.GenerateXmlDocumentation == true)
+            CompilationFiles = new CompilationOutputFiles(CompilationOutputPath, project, configuration, framework);
+            if (_runtimePath != null)
             {
-                yield return Path.ChangeExtension(assemblyPath, "xml");
-            }
-
-            // This should only exist in desktop framework
-            var configFile = assemblyPath + ".config";
-
-            if (File.Exists(configFile))
-            {
-                yield return configFile;
-            }
-
-            // Deps file
-            var depsFile = GetDepsPath(buildConfiguration);
-
-            if (File.Exists(depsFile))
-            {
-                yield return depsFile;
+                _runtimeFiles = new RuntimeOutputFiles(_runtimePath, project, configuration, framework);
             }
         }
 
-        public string GetDepsPath(string buildConfiguration)
-        {
-            return Path.Combine(GetOutputDirectoryPath(buildConfiguration), _project.Name + FileNameSuffixes.Deps);
-        }
+        public string CompilationOutputPath { get; }
 
-        public string GetExecutablePath(string buildConfiguration)
+        public string RuntimeOutputPath
         {
-            var extension = FileNameSuffixes.CurrentPlatform.Exe;
-
-            // This is the check for mono, if we're not on windows and producing outputs for
-            // the desktop framework then it's an exe
-            if (_framework.IsDesktop())
+            get
             {
-                extension = FileNameSuffixes.DotNet.Exe;
+                if (_runtimePath == null)
+                {
+                    throw new InvalidOperationException(
+                        $"Cannot get runtime output path for {nameof(OutputPathCalculator)} with no runtime set");
+                }
+                return _runtimePath;
             }
-
-            return Path.Combine(
-                GetOutputDirectoryPath(buildConfiguration),
-                _project.Name + extension);
         }
 
-        public string GetPdbPath(string buildConfiguration)
+        public string IntermediateOutputDirectoryPath { get; }
+
+        public CompilationOutputFiles CompilationFiles { get; }
+
+        public RuntimeOutputFiles RuntimeFiles
         {
-            return Path.Combine(
-                GetOutputDirectoryPath(buildConfiguration),
-                _project.Name + FileNameSuffixes.DotNet.ProgramDatabase);
+            get
+            {
+                if (_runtimeFiles == null)
+                {
+                    throw new InvalidOperationException(
+                        $"Cannot get runtime output files for {nameof(OutputPathCalculator)} with no runtime set");
+                }
+                return _runtimeFiles;
+            }
         }
     }
 }

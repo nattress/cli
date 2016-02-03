@@ -21,6 +21,8 @@
   },
 
   "content": [
+    "../TestProjects/TestApp/**/*",
+    "../TestProjects/TestLibrary/**/*",
     "../TestProjects/TestSimpleIncrementalApp/*",
     "../TestProjects/TestProjectToProjectDependencies/**/*",
     "../TestProjects/global.json"

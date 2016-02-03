@@ -56,10 +56,13 @@ namespace Microsoft.DotNet.Tools.Pack
 
         public string InputPathForContext(ProjectContext context)
         {
-            return Path.Combine(
-                CompiledArtifactsPath,
+            return new OutputPathCalculator(context.ProjectFile,
+                context.TargetFramework,
+                context.RuntimeIdentifier,
                 _configuration,
-                context.TargetFramework.GetTwoDigitShortFolderName());
-        }        
+                context.RootDirectory,
+                CompiledArtifactsPathParameter,
+                null).CompilationOutputPath;
+        }
     }
 }

@@ -13,9 +13,7 @@ namespace Microsoft.DotNet.Cli.Compiler.Common
     {
         public static string ProjectName(this ProjectContext context) => context.RootProject.Identity.Name;
         public static string GetDisplayName(this ProjectContext context) => $"{context.RootProject.Identity.Name} ({context.TargetFramework})";
-
-        public static bool IsTestProject(this ProjectContext context) => !string.IsNullOrEmpty(context.ProjectFile.TestRunner);        
-
+        
         public static CommonCompilerOptions GetLanguageSpecificCompilerOptions(this ProjectContext context, NuGetFramework framework, string configurationName)
         {
             var baseOption = context.ProjectFile.GetCompilerOptions(framework, configurationName);

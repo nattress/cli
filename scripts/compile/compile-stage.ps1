@@ -48,15 +48,6 @@ if (!$?) {
     Exit 1
 }
 
-# Build the projects that we are going to ship as nuget packages
-$ProjectsToPack | ForEach-Object {
-    dotnet build --output "$CompilationOutputDir\forPackaging" --configuration "$Configuration" "$RepoRoot\src\$_"
-    if (!$?) {
-        Write-Host Command failed: dotnet build --native-subdirectory --output "$CompilationOutputDir\forPackaging" --configuration "$Configuration" "$RepoRoot\src\$_"
-        exit 1
-    }
-}
-
 # Clean up bogus additional files
 $FilesToClean | ForEach-Object {
     $path = Join-Path $RuntimeOutputDir $_
@@ -85,10 +76,10 @@ $BinariesForCoreHost | ForEach-Object {
 }
 
 # Crossgen Roslyn
-if (-not (Test-Path "$StageOutputDir\bin\csc.ni.exe")) {
-    header "Crossgening Roslyn compiler ..."
-    _cmd "$RepoRoot\scripts\crossgen\crossgen_roslyn.cmd ""$StageOutputDir"""
-}
+#if (-not (Test-Path "$StageOutputDir\bin\csc.ni.exe")) {
+#    header "Crossgening Roslyn compiler ..."
+#    _cmd "$RepoRoot\scripts\crossgen\crossgen_roslyn.cmd ""$StageOutputDir"""
+#}
 
 # Copy in AppDeps
 header "Acquiring Native App Dependencies"
