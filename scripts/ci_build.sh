@@ -31,6 +31,7 @@ container_name=""
 
 #Jenkins
 [ ! -z "$BUILD_TAG" ] && container_name="$BUILD_TAG"
+
 #VSO
 [ ! -z "$BUILD_BUILDID" ] && container_name="$BUILD_BUILDID"
 

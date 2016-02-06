@@ -3,6 +3,11 @@
 # Licensed under the MIT license. See LICENSE file in the project root for full license information.
 #
 
+param(
+    [string]$Configuration="Debug")
+
+$env:CONFIGURATION = $Configuration;
+
 # Load Branch Info
 cat "$PSScriptRoot\..\branchinfo.txt" | ForEach-Object {
     if(!$_.StartsWith("#") -and ![String]::IsNullOrWhiteSpace($_)) {
