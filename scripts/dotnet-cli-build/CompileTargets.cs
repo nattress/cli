@@ -59,6 +59,7 @@ namespace Microsoft.DotNet.Cli.Build
             // Generate build files
             var cmakeOut = Path.Combine(Dirs.Corehost, "cmake");
 
+            Rmdir(cmakeOut);
             Mkdirp(cmakeOut);
             ExecIn(cmakeOut, "cmake",
                 Path.Combine(c.BuildContext.BuildDirectory, "src", "corehost"),
@@ -92,11 +93,11 @@ namespace Microsoft.DotNet.Cli.Build
             }
             else
             {
-                ExecIn(Dirs.Corehost, "make");
+                ExecIn(cmakeOut, "make");
 
                 // Copy the output out
-                File.Copy(Path.Combine(cmakeOut, "cli", "Debug", "corehost"), Path.Combine(Dirs.Corehost, "corehost"), overwrite: true);
-                File.Copy(Path.Combine(cmakeOut, "cli", "dll", "Debug", $"hostpolicy.{Constants.DynamicLibSuffix}"), Path.Combine(Dirs.Corehost, $"hostpolicy.{Constants.DynamicLibSuffix}"), overwrite: true);
+                File.Copy(Path.Combine(cmakeOut, "cli", "corehost"), Path.Combine(Dirs.Corehost, "corehost"), overwrite: true);
+                File.Copy(Path.Combine(cmakeOut, "cli", "dll", $"{Constants.DynamicLibPrefix}hostpolicy{Constants.DynamicLibSuffix}"), Path.Combine(Dirs.Corehost, $"{Constants.DynamicLibPrefix}hostpolicy{Constants.DynamicLibSuffix}"), overwrite: true);
             }
 
             return c.Success();
