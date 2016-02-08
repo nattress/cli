@@ -2,9 +2,11 @@
 using Microsoft.Extensions.PlatformAbstractions;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Runtime.InteropServices;
 
+using static Microsoft.DotNet.Cli.Build.FS;
 using static Microsoft.DotNet.Cli.Build.Framework.BuildHelpers;
 
 namespace Microsoft.DotNet.Cli.Build
@@ -108,6 +110,52 @@ cmake is required to build the native host 'corehost'";
         }
 
         [Target]
+        public static BuildTargetResult CheckPackageCache(BuildTargetContext c)
+        {
+            // Set the package cache location in NUGET_PACKAGES just to be safe
+            if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("NUGET_PACKAGES")))
+            {
+                Environment.SetEnvironmentVariable("NUGET_PACKAGES", Dirs.NuGetPackages);
+            }
+
+            // Determine cache expiration time
+            var cacheExpiration = 7 * 24; // cache expiration in hours
+            var cacheExpirationStr = Environment.GetEnvironmentVariable("NUGET_PACKAGES_CACHE_TIME_LIMIT");
+            if(!string.IsNullOrEmpty(cacheExpirationStr))
+            {
+                cacheExpiration = int.Parse(cacheExpirationStr);
+            }
+
+            if(string.Equals(Environment.GetEnvironmentVariable("CI_BUILD"), "1", StringComparison.Ordinal))
+            {
+                var cacheTimeFile = Path.Combine(Dirs.NuGetPackages, "packageCacheTime.txt");
+
+                // Read the cache file
+                DateTime? cacheTime = null;
+                if(File.Exists(cacheTimeFile))
+                {
+                    var content = File.ReadAllText(cacheTimeFile);
+                    if(!string.IsNullOrEmpty(content))
+                    {
+                        cacheTime = DateTime.ParseExact("O", content, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal);
+                    }
+                }
+
+                if(cacheTime == null || (cacheTime.Value.AddHours(cacheExpiration) < DateTime.UtcNow))
+                {
+                    // Cache has expired, clear it
+                    Rmdir(Dirs.NuGetPackages);
+                    Mkdirp(Dirs.NuGetPackages);
+                }
+
+                // Update the file
+                File.WriteAllText(cacheTimeFile, DateTime.UtcNow.ToString("O"));
+            }
+
+            return c.Success();
+        }
+
+        [Target(nameof(CheckPackageCache))]
         public static BuildTargetResult RestorePackages(BuildTargetContext c)
         {
             var dotnet = DotNetCli.Stage0;
