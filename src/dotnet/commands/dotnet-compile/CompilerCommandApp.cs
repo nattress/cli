@@ -4,12 +4,12 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using Microsoft.Dnx.Runtime.Common.CommandLine;
 using Microsoft.DotNet.Cli.Utils;
 using Microsoft.DotNet.ProjectModel;
-using NuGet.Frameworks;
-using System.Linq;
 using Microsoft.Extensions.PlatformAbstractions;
+using NuGet.Frameworks;
 
 // This class is responsible with defining the arguments for the Compile verb.
 // It knows how to interpret them and set default values

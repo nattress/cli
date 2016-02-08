@@ -105,37 +105,6 @@ namespace Microsoft.DotNet.ProjectModel
                                 .Build();
             }
         }
-        /// <summary>
-        /// Creates a project context for each framework located in the project at <paramref name="projectPath"/>
-        /// </summary>
-        public static ProjectContext CreateContextForDefaultFramework(string projectPath, ProjectReaderSettings settings = null, IEnumerable<string> runtimeIdentifiers = null)
-        {
-            if (!projectPath.EndsWith(Project.FileName))
-            {
-                projectPath = Path.Combine(projectPath, Project.FileName);
-            }
-            var project = ProjectReader.GetProject(projectPath, settings);
-
-            var defaultFrameworks = new[]
-            {
-                FrameworkConstants.FrameworkIdentifiers.DnxCore,
-                FrameworkConstants.FrameworkIdentifiers.NetStandard,
-                FrameworkConstants.FrameworkIdentifiers.NetStandardApp,
-            };
-            foreach (var framework in project.GetTargetFrameworks())
-            {
-                if (defaultFrameworks.Contains(framework.FrameworkName.Framework))
-                {
-                    return new ProjectContextBuilder()
-                        .WithProject(project)
-                        .WithTargetFramework(framework.FrameworkName)
-                        .WithReaderSettings(settings)
-                        .WithRuntimeIdentifiers(runtimeIdentifiers ?? Enumerable.Empty<string>())
-                        .Build();
-                }
-            }
-            throw new InvalidOperationException($"Couldn't find default target with framework: {string.Join(",", defaultFrameworks)}");
-        }
 
         /// <summary>
         /// Creates a project context for each target located in the project at <paramref name="projectPath"/>
